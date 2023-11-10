@@ -11,8 +11,8 @@ const MERRILL_CLASSROOM = leaflet.latLng({
 
 const GAMEPLAY_ZOOM_LEVEL = 19;
 const TILE_DEGREES = 1e-4;
-const NEIGHBORHOOD_SIZE = 8;
-const PIT_SPAWN_PROBABILITY = 0.1;
+const NEIGHBORHOOD_SIZE = 64;
+const PIT_SPAWN_PROBABILITY = 0.04;
 
 const mapContainer = document.querySelector<HTMLElement>("#map")!;
 
@@ -49,7 +49,7 @@ sensorButton.addEventListener("click", () => {
 
 let points = 0;
 const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
-statusPanel.innerHTML = "No points yet...";
+statusPanel.innerHTML = "No coins yet...";
 
 function makePit(i: number, j: number) {
   const bounds = leaflet.latLngBounds([
@@ -64,20 +64,34 @@ function makePit(i: number, j: number) {
   ]);
 
   const pit = leaflet.rectangle(bounds) as leaflet.Layer;
+  let value = Math.floor(luck([i, j, "initialValue"].toString()) * 100);
 
   pit.bindPopup(() => {
-    let value = Math.floor(luck([i, j, "initialValue"].toString()) * 100);
     const container = document.createElement("div");
     container.innerHTML = `
-                <div>There is a pit here at "${i},${j}". It has value <span id="value">${value}</span>.</div>
-                <button id="poke">poke</button>`;
-    const poke = container.querySelector<HTMLButtonElement>("#poke")!;
-    poke.addEventListener("click", () => {
-      value--;
-      container.querySelector<HTMLSpanElement>("#value")!.innerHTML =
-        value.toString();
-      points++;
-      statusPanel.innerHTML = `${points} points accumulated`;
+                <div>There is a pit here at "${i},${j}". It has <span id="value">${value}</span> coins.</div>
+                <button id="collect">Collect</button>
+                <button id="deposit">Deposit</button>
+                `;
+    const collect = container.querySelector<HTMLButtonElement>("#collect")!;
+    collect.addEventListener("click", () => {
+      if (value > 0) {
+        value--;
+        container.querySelector<HTMLSpanElement>("#value")!.innerHTML =
+          value.toString();
+        points++;
+        statusPanel.innerHTML = `${points} coins`;
+      }
+    });
+    const deposit = container.querySelector<HTMLButtonElement>("#deposit")!;
+    deposit.addEventListener("click", () => {
+      if (points > 0) {
+        value++;
+        container.querySelector<HTMLSpanElement>("#value")!.innerHTML =
+          value.toString();
+        points--;
+        statusPanel.innerHTML = `${points} coins`;
+      }
     });
     return container;
   });
