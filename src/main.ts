@@ -2,7 +2,14 @@ import "leaflet/dist/leaflet.css";
 import "./style.css";
 import leaflet from "leaflet";
 import luck from "./luck";
+// import Board from "./board";
 import "./leafletWorkaround";
+
+interface Coin {
+  i: number;
+  j: number;
+  serial: number;
+}
 
 const MERRILL_CLASSROOM = leaflet.latLng({
   lat: 36.9995,
@@ -47,7 +54,8 @@ sensorButton.addEventListener("click", () => {
   });
 });
 
-let points = 0;
+let wallet: Coin[] = [];
+// const board = new Board(1, 1);
 const statusPanel = document.querySelector<HTMLDivElement>("#statusPanel")!;
 statusPanel.innerHTML = "No coins yet...";
 
@@ -66,31 +74,47 @@ function makePit(i: number, j: number) {
   const pit = leaflet.rectangle(bounds) as leaflet.Layer;
   let value = Math.floor(luck([i, j, "initialValue"].toString()) * 100);
 
+  let lat = MERRILL_CLASSROOM.lat * 1e4 + i;
+  let lng = MERRILL_CLASSROOM.lng * 1e4 + j;
+
+  let coins: Coin[] = [];
+  for (let x = 0; x < value; x++) {
+    coins.push({ i: lat, j: lng, serial: x });
+  }
+
   pit.bindPopup(() => {
     const container = document.createElement("div");
     container.innerHTML = `
-                <div>There is a pit here at "${i},${j}". It has <span id="value">${value}</span> coins.</div>
+                <div>There is a pit here at "${lat},${lng}". It has <span id="value">${coins.length}</span> coins.</div>
                 <button id="collect">Collect</button>
                 <button id="deposit">Deposit</button>
                 `;
     const collect = container.querySelector<HTMLButtonElement>("#collect")!;
     collect.addEventListener("click", () => {
-      if (value > 0) {
-        value--;
+      if (coins.length > 0) {
         container.querySelector<HTMLSpanElement>("#value")!.innerHTML =
           value.toString();
-        points++;
-        statusPanel.innerHTML = `${points} coins`;
+        wallet.push(coins.shift()!);
+        const len = wallet.length;
+        statusPanel.innerHTML = `${len} coins (Last coin: ${
+          wallet[len - 1].i
+        }:${wallet[len - 1].j}#${wallet[len - 1].serial})`;
       }
     });
     const deposit = container.querySelector<HTMLButtonElement>("#deposit")!;
     deposit.addEventListener("click", () => {
-      if (points > 0) {
-        value++;
+      if (wallet.length > 0) {
         container.querySelector<HTMLSpanElement>("#value")!.innerHTML =
           value.toString();
-        points--;
-        statusPanel.innerHTML = `${points} coins`;
+        coins.unshift(wallet.pop()!);
+        const len = wallet.length;
+        if (len > 0) {
+          statusPanel.innerHTML = `${len} coins (Last coin: ${
+            wallet[len - 1].i
+          }:${wallet[len - 1].j}#${wallet[len - 1].serial})`;
+        } else {
+          statusPanel.innerHTML = `${len} coins`;
+        }
       }
     });
     return container;
